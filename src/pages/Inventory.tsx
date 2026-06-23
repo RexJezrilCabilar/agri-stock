@@ -45,26 +45,15 @@ export default function Inventory() {
         setProducts(prev => prev.filter(p => p.id !== id))
     }
 
-    function handleSell(productId: number, qty: number) {
-        const product = products.find(p => p.id === productId)
-        if (!product) return
-
-        setProducts(prev =>
-            prev
-                .map(p => p.id === productId ? { ...p, qty: p.qty - qty } : p)
-                .filter(p => p.qty > 0)
-        )
-
-        setTransactions(prev => [
-            ...prev,
-            {
-                id: Date.now(),
-                product_id: productId,
-                product_name: product.name,
-                qty_sold: qty,
-                sold_at: new Date().toISOString(),
-            },
+    async function handleSell(productId: number, qty: number) {
+        // Re-fetch fresh data from Supabase instead of mutating local state
+        const [{ data: productData }, { data: transactionData }] = await Promise.all([
+            supabase.from('products').select('*').order('id', { ascending: true }),
+            supabase.from('transactions').select('*').order('sold_at', { ascending: true }),
         ])
+
+        if (productData) setProducts(productData)
+        if (transactionData) setTransactions(transactionData)
     }
 
     const tabs: { key: Tab; label: string }[] = [
